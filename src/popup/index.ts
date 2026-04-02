@@ -1,4 +1,5 @@
 import { sendExtensionMessage } from "../lib/extension-messaging.js";
+import { EXTENSION_API_BASE_URL } from "../lib/extension-api-base.const.js";
 import type { SiteBehavior } from "../lib/schema.js";
 import { renderProfileOptions } from "./profile-selector.js";
 
@@ -34,6 +35,15 @@ function showPage(which: "signin" | "main"): void {
   main.classList.toggle("hidden", which !== "main");
 }
 
+function signinHintHtml(): string {
+  const base = EXTENSION_API_BASE_URL;
+  const isLocal = /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(base);
+  if (isLocal) {
+    return `Sign-in uses your Knight Devs app at <strong>${base}</strong> (same account as the website). Start <code>npm run dev</code> on the platform first.`;
+  }
+  return `Sign-in uses your Knight Devs account on <strong>${base}</strong> (same email and password as the web app).`;
+}
+
 function setSigninError(el: HTMLDivElement, text: string | null): void {
   if (!text) {
     el.textContent = "";
@@ -63,6 +73,11 @@ function applyMainData(data: PopupResponse): void {
 }
 
 async function init(): Promise<void> {
+  const signinHint = document.getElementById("signinHint");
+  if (signinHint) {
+    signinHint.innerHTML = signinHintHtml();
+  }
+
   const emailInput = document.getElementById("emailInput") as HTMLInputElement;
   const passwordInput = document.getElementById("passwordInput") as HTMLInputElement;
   const loginBtn = document.getElementById("loginBtn") as HTMLButtonElement;

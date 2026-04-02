@@ -10,6 +10,7 @@
     "https://*.greenhouse.io/*",
     "https://jobs.lever.co/*",
     "https://api.knightdevs.com/*",
+    "https://knight-devs-platform-sigma.vercel.app/*",
     "http://localhost:3000/*",
     "http://127.0.0.1:3000/*",
     "http://localhost:3001/*",

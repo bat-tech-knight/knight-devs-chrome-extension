@@ -1,7 +1,8 @@
 import { DEFAULT_SITE_BEHAVIOR, type ExtensionState, type SiteBehavior } from "./schema.js";
+import { EXTENSION_API_BASE_URL } from "./extension-api-base.const.js";
 
 const KEY = "knightDevsAutofillState";
-const DEFAULT_BASE_URL = "http://localhost:3000";
+const DEFAULT_BASE_URL = EXTENSION_API_BASE_URL;
 
 const DEFAULT_STATE: ExtensionState = {
   activeProfileId: null,

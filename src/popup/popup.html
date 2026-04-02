@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Knight Devs Autofill</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+        width: 340px;
+        margin: 0;
+        padding: 0;
+        color: #1a1a1a;
+      }
+      .page {
+        padding: 14px;
+      }
+      .page h1 {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 0 0 10px;
+      }
+      label {
+        display: block;
+        margin-top: 10px;
+        margin-bottom: 4px;
+        font-size: 11px;
+        font-weight: 500;
+        color: #444;
+      }
+      input[type="email"],
+      input[type="password"],
+      input[type="text"],
+      select,
+      button {
+        width: 100%;
+        padding: 8px 10px;
+        margin-bottom: 6px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 13px;
+      }
+      button {
+        cursor: pointer;
+        background: #111;
+        color: #fff;
+        border-color: #111;
+        font-weight: 500;
+        margin-top: 8px;
+      }
+      button.secondary {
+        background: #fff;
+        color: #111;
+        border-color: #bbb;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      #status,
+      .hint {
+        font-size: 11px;
+        color: #555;
+        min-height: 14px;
+        margin-top: 8px;
+        line-height: 1.35;
+      }
+      .error {
+        color: #b00020;
+        font-size: 11px;
+        margin-top: 8px;
+        line-height: 1.35;
+      }
+      .muted {
+        font-size: 11px;
+        color: #666;
+        margin-bottom: 8px;
+        line-height: 1.4;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .main-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e8e8e8;
+      }
+      .main-header .who {
+        font-size: 12px;
+        color: #333;
+        word-break: break-all;
+      }
+      .main-header button {
+        margin-top: 0;
+        flex-shrink: 0;
+        width: auto;
+        padding: 6px 10px;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="pageSignin" class="page">
+      <h1>Sign in</h1>
+      <p class="muted">
+        Sign-in uses your local Knight Devs app at <strong>http://localhost:3000</strong> (same account as the website). Start <code>npm run dev</code> first.
+      </p>
+      <label for="emailInput">Email</label>
+      <input id="emailInput" type="email" name="email" autocomplete="username" required />
+      <label for="passwordInput">Password</label>
+      <input id="passwordInput" type="password" name="password" autocomplete="current-password" required />
+      <button id="loginBtn" type="button">Sign in</button>
+      <div id="signinError" class="error hidden" role="alert"></div>
+      <div id="signinStatus" class="hint"></div>
+    </div>
+
+    <div id="pageMain" class="page hidden">
+      <div class="main-header">
+        <div>
+          <h1 style="margin-bottom: 4px">Autofill</h1>
+          <div id="userInfo" class="who"></div>
+        </div>
+        <button id="logoutBtn" type="button" class="secondary">Sign out</button>
+      </div>
+
+      <label for="profileSelect">Expert profile</label>
+      <select id="profileSelect"></select>
+
+      <label for="triggerMode">Trigger mode</label>
+      <select id="triggerMode">
+        <option value="manual">Manual button</option>
+        <option value="auto_on_load">Auto-fill on load</option>
+      </select>
+
+      <label for="submitMode">Submit mode</label>
+      <select id="submitMode">
+        <option value="fill_only">Fill only</option>
+        <option value="fill_and_submit">Fill and submit</option>
+      </select>
+
+      <label style="display: flex; align-items: center; gap: 8px; margin-top: 12px">
+        <input type="checkbox" id="fieldAssistEnabled" />
+        Show field assist chip (saved answers / AI on inputs)
+      </label>
+
+      <label style="display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; line-height: 1.35">
+        <input type="checkbox" id="aiFillMissingFields" style="width: auto; margin-top: 2px" />
+        <span>Use AI to fill open-ended questions that have no saved answer (saves drafts for next time)</span>
+      </label>
+
+      <button id="fillNow" type="button">Fill now</button>
+
+      <div id="status" class="hint"></div>
+    </div>
+
+    <script src="../../dist/src/popup/index.js"></script>
+  </body>
+</html>

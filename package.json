@@ -1,0 +1,22 @@
+{
+  "name": "knight-devs-autofill-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && npm run build:background && npm run build:content && npm run build:popup",
+    "build:background": "esbuild src/background.ts --bundle --outfile=dist/src/background.js --platform=browser --format=esm --target=es2022 --legal-comments=none",
+    "build:content": "esbuild src/content/index.ts --bundle --outfile=dist/src/content/index.js --platform=browser --format=iife --target=es2022 --legal-comments=none",
+    "build:popup": "esbuild src/popup/index.ts --bundle --outfile=dist/src/popup/index.js --platform=browser --format=iife --target=es2022 --legal-comments=none",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.popup.json --noEmit",
+    "test": "node --test dist/test/**/*.test.js",
+    "build:test": "npm run build && npm run test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/chrome": "^0.1.24",
+    "@types/node": "^24.5.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.2"
+  }
+}

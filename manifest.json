@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Knight Devs Autofill",
+  "version": "0.1.0",
+  "description": "Autofill job and application forms on any site using your Knight Devs expert profile (Greenhouse & Lever get tailored rules).",
+  "permissions": ["storage", "activeTab", "scripting", "tabs"],
+  "host_permissions": [
+    "https://boards.greenhouse.io/*",
+    "https://job-boards.greenhouse.io/*",
+    "https://*.greenhouse.io/*",
+    "https://jobs.lever.co/*",
+    "https://api.knightdevs.com/*",
+    "http://localhost:3000/*",
+    "http://127.0.0.1:3000/*",
+    "http://localhost:3001/*",
+    "http://127.0.0.1:3001/*"
+  ],
+  "background": {
+    "service_worker": "dist/src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Knight Devs Autofill",
+    "default_popup": "src/popup/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["dist/src/content/index.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ]
+}

@@ -41,7 +41,7 @@ async function sendToContentScript<T>(tabId: number, message: unknown): Promise<
 
   await chrome.scripting.executeScript({
     target: { tabId },
-    files: ["dist/src/content/index.js"],
+    files: ["content.js"],
   });
 
   await new Promise((r) => setTimeout(r, 150));

@@ -17,17 +17,17 @@
     "http://127.0.0.1:3001/*"
   ],
   "background": {
-    "service_worker": "dist/src/background.js",
+    "service_worker": "background.js",
     "type": "module"
   },
   "action": {
     "default_title": "Knight Devs Autofill",
-    "default_popup": "src/popup/popup.html"
+    "default_popup": "popup.html"
   },
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["dist/src/content/index.js"],
+      "js": ["content.js"],
       "run_at": "document_idle",
       "all_frames": true
     }

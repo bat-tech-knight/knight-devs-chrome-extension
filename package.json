@@ -6,13 +6,10 @@
   "scripts": {
     "prepare": "node scripts/sync-extension-api-base.mjs",
     "prebuild": "node scripts/sync-extension-api-base.mjs",
-    "build": "tsc -p tsconfig.json && npm run build:background && npm run build:content && npm run build:popup",
+    "build": "tsc -p tsconfig.json && node scripts/build-extension-folder.mjs",
     "build:prod": "node scripts/sync-extension-api-base.mjs .env.prod && npm run build --ignore-scripts",
     "precheck": "node scripts/sync-extension-api-base.mjs",
     "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.popup.json --noEmit",
-    "build:background": "esbuild src/background.ts --bundle --outfile=dist/src/background.js --platform=browser --format=esm --target=es2022 --legal-comments=none",
-    "build:content": "esbuild src/content/index.ts --bundle --outfile=dist/src/content/index.js --platform=browser --format=iife --target=es2022 --legal-comments=none",
-    "build:popup": "esbuild src/popup/index.ts --bundle --outfile=dist/src/popup/index.js --platform=browser --format=iife --target=es2022 --legal-comments=none",
     "test": "node --test dist/test/**/*.test.js",
     "build:test": "npm run build && npm run test"
   },

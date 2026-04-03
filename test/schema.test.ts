@@ -10,6 +10,7 @@ test("normalizeCandidate maps profile fields", () => {
       email: "jane@example.com",
       core_skills: ["TypeScript", "React"],
       other_skills: ["Node.js"],
+      us_work_authorized: true,
       requires_sponsorship: false,
     },
     "profile-1"
@@ -19,6 +20,7 @@ test("normalizeCandidate maps profile fields", () => {
   assert.equal(candidate.fullName, "Jane Doe");
   assert.equal(candidate.email, "jane@example.com");
   assert.deepEqual(candidate.skills, ["TypeScript", "React", "Node.js"]);
+  assert.equal(candidate.usWorkAuthorized, true);
   assert.equal(candidate.requiresSponsorship, false);
 });
 

@@ -29,6 +29,8 @@ export interface AutofillCandidate {
   /** Public/storage URL from API (optional); PDF attach uses authenticated proxy route by profileId. */
   resumeUrl?: string;
   workAuthorization?: string;
+  /** Legally authorized to work in the United States (job application Yes/No). */
+  usWorkAuthorized?: boolean;
   requiresSponsorship?: boolean;
   skills: string[];
   workExperience: string[];
@@ -106,6 +108,7 @@ export function normalizeCandidate(raw: Record<string, unknown>, profileId: stri
     resumeText: stringOrUndefined(raw.resume_text),
     resumeUrl: stringOrUndefined(raw.resume_url),
     workAuthorization: stringOrUndefined(raw.work_authorization),
+    usWorkAuthorized: booleanOrUndefined(raw.us_work_authorized),
     requiresSponsorship: booleanOrUndefined(raw.requires_sponsorship),
     skills: arrayOfStrings(raw.core_skills, raw.other_skills),
     workExperience: arrayOfStrings(raw.experience),

@@ -117,6 +117,51 @@ function builtinFromIdNameAndLabel(el: HTMLElement): string | null {
   if (/\bcity\b|\btown\b/.test(blob)) return "address_city";
   if (/\blocation\b|\bwhere are you based\b/.test(blob)) return "location";
 
+  if (
+    /\blegally authorized\b/.test(blob) &&
+    /\bunited states\b/.test(blob) &&
+    !/\bsponsor/.test(blob)
+  )
+    return "us_work_authorized";
+  if (
+    /\bvisa sponsorship\b/.test(blob) ||
+    /\bemployment visa sponsorship\b/.test(blob) ||
+    (/\bsponsorship\b/.test(blob) && /\bvisa\b/.test(blob)) ||
+    /\bh-?1b\b/.test(blob) ||
+    /\bo-1\b/.test(blob)
+  )
+    return "requires_visa_sponsorship";
+
+  return null;
+}
+
+function radioQuestionBlob(el: HTMLInputElement): string {
+  const parts: string[] = [labelBlob(el)];
+  const fs = el.closest("fieldset");
+  const leg = fs?.querySelector("legend");
+  if (leg?.textContent) parts.push(leg.textContent);
+  const group = el.closest("[role='group'], .form-group, [class*='field']");
+  if (group && group !== fs && group.textContent) {
+    parts.push(group.textContent.slice(0, 400));
+  }
+  return norm(parts.join(" "));
+}
+
+function builtinFromRadioGroupContext(el: HTMLInputElement): string | null {
+  const blob = radioQuestionBlob(el);
+  const sponsorship =
+    /\bvisa sponsorship\b/.test(blob) ||
+    /\bemployment visa sponsorship\b/.test(blob) ||
+    (/\bsponsorship\b/.test(blob) && /\bvisa\b/.test(blob)) ||
+    /\bh-?1b\b/.test(blob) ||
+    /\bo-1\b/.test(blob);
+  const usAuth =
+    /\blegally authorized\b/.test(blob) &&
+    /\bunited states\b/.test(blob) &&
+    !/\bsponsor/.test(blob);
+
+  if (usAuth && !sponsorship) return "us_work_authorized";
+  if (sponsorship) return "requires_visa_sponsorship";
   return null;
 }
 
@@ -124,6 +169,9 @@ function builtinFromIdNameAndLabel(el: HTMLElement): string | null {
  * Returns a builtin key e.g. `first_name`, or null if this is not a standard profile field.
  */
 export function detectBuiltinFieldKey(el: HTMLElement): string | null {
+  if (el instanceof HTMLInputElement && el.type.toLowerCase() === "radio") {
+    return builtinFromRadioGroupContext(el);
+  }
   if (el instanceof HTMLSelectElement) {
     if (el.multiple) return null;
     return builtinFromIdNameAndLabel(el);

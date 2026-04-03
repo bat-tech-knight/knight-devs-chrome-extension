@@ -3,7 +3,12 @@ import type { SupportedSite } from "../lib/schema.js";
 import { buildBuiltinQuestionKey, buildQuestionKey } from "../lib/question-key.js";
 import { detectBuiltinFieldKey } from "./builtin-field-detect.js";
 import { autofillLog } from "./autofill-log.js";
-import { fillSelectBySavedAnswer, fillTextInput, tryFillReactSelect } from "./fill-engine.js";
+import {
+  fillRadioGroupBySavedAnswer,
+  fillSelectBySavedAnswer,
+  fillTextInput,
+  tryFillReactSelect,
+} from "./fill-engine.js";
 import { getExternalFieldId, getFieldLabelSnapshot, siteSourceFromHost } from "./field-metadata.js";
 
 function isFillableTextControl(el: Element): el is HTMLInputElement | HTMLTextAreaElement {
@@ -19,6 +24,18 @@ function isFillableSelect(el: Element): el is HTMLSelectElement {
   return el instanceof HTMLSelectElement && !el.disabled && !el.multiple;
 }
 
+function isFillableRadio(el: Element): el is HTMLInputElement {
+  return el instanceof HTMLInputElement && el.type.toLowerCase() === "radio" && !el.disabled;
+}
+
+function radiosInNameGroup(r: HTMLInputElement): HTMLInputElement[] {
+  if (!r.name.trim()) return [r];
+  const scope: Document | HTMLFormElement = r.form ?? r.ownerDocument;
+  return Array.from(scope.querySelectorAll("input[type='radio']:not([disabled])")).filter(
+    (n): n is HTMLInputElement => n instanceof HTMLInputElement && n.name === r.name
+  );
+}
+
 export function collectFormFillTargets(
   site: SupportedSite
 ): (HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement)[] {
@@ -32,6 +49,19 @@ export function collectFormFillTargets(
   }
 
   const out: (HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement)[] = [];
+
+  for (const n of Array.from(root.querySelectorAll("input[type='radio']"))) {
+    if (!isFillableRadio(n)) continue;
+    if (n.offsetParent === null && n !== document.activeElement) {
+      try {
+        const st = window.getComputedStyle(n);
+        if (st.display === "none" || st.visibility === "hidden") continue;
+      } catch {
+        continue;
+      }
+    }
+    out.push(n);
+  }
 
   for (const n of Array.from(root.querySelectorAll("input, textarea"))) {
     if (!isFillableTextControl(n)) continue;
@@ -92,7 +122,15 @@ export async function applyMatchingSavedAnswers(
   const targets = collectFormFillTargets(site);
   autofillLog("savedAnswersMerge: candidates", { count: targets.length, site });
 
+  const seenRadioGroups = new Set<string>();
+
   for (const el of targets) {
+    if (el instanceof HTMLInputElement && el.type.toLowerCase() === "radio" && el.name.trim()) {
+      const gk = `${el.form?.id || ""}::${el.name}`;
+      if (seenRadioGroups.has(gk)) continue;
+      seenRadioGroups.add(gk);
+    }
+
     const labelSnapshot = getFieldLabelSnapshot(el);
     const externalFieldId = getExternalFieldId(el);
     const key = await buildQuestionKey({
@@ -109,7 +147,10 @@ export async function applyMatchingSavedAnswers(
     if (!answer?.trim()) continue;
 
     let ok = false;
-    if (el instanceof HTMLSelectElement) {
+    if (el instanceof HTMLInputElement && el.type.toLowerCase() === "radio") {
+      const group = radiosInNameGroup(el);
+      ok = fillRadioGroupBySavedAnswer(group, answer);
+    } else if (el instanceof HTMLSelectElement) {
       ok = fillSelectBySavedAnswer(el, answer);
     } else if (el instanceof HTMLInputElement && el.getAttribute("role") === "combobox") {
       autofillLog("savedAnswersMerge: react-select combobox", { id: el.id || null });

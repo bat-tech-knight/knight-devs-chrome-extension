@@ -306,6 +306,169 @@ export function tryFillSelect(
   return false;
 }
 
+function fillYesNoSelect(select: HTMLSelectElement, yes: boolean): boolean {
+  if (select.disabled || select.multiple) return false;
+  const tokens = yes ? ["yes", "true", "1", "y"] : ["no", "false", "0", "n"];
+
+  for (const opt of Array.from(select.options)) {
+    if (!opt.value) continue;
+    const optText = (opt.textContent || "").trim().toLowerCase();
+    const optVal = (opt.value || "").trim().toLowerCase();
+    const hit = tokens.some(
+      (w) => optVal === w || optText === w || optText.startsWith(`${w} `) || optText.startsWith(`${w},`)
+    );
+    if (hit) {
+      select.focus();
+      select.value = opt.value;
+      select.dispatchEvent(new Event("input", { bubbles: true }));
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
+    }
+  }
+  return false;
+}
+
+function radioIntentMatches(r: HTMLInputElement, yes: boolean): boolean {
+  const val = (r.value || "").trim().toLowerCase();
+  if (yes) {
+    if (["yes", "true", "1", "y"].includes(val)) return true;
+  } else if (["no", "false", "0", "n"].includes(val)) {
+    return true;
+  }
+
+  const doc = r.ownerDocument;
+  const id = r.id?.trim();
+  let labelText = "";
+  if (id) {
+    const lb = doc.querySelector(`label[for="${CSS.escape(id)}"]`);
+    labelText = (lb?.textContent || "").trim().toLowerCase();
+  }
+  if (!labelText && r.parentElement?.tagName === "LABEL") {
+    labelText = (r.parentElement.textContent || "").trim().toLowerCase();
+  }
+  if (yes) {
+    return /\byes\b/.test(labelText);
+  }
+  return /\bno\b/.test(labelText);
+}
+
+function fillYesNoRadioGroup(radios: HTMLInputElement[], yes: boolean): boolean {
+  for (const r of radios) {
+    if (!radioIntentMatches(r, yes)) continue;
+    r.focus();
+    r.checked = true;
+    r.dispatchEvent(new Event("input", { bubbles: true }));
+    r.dispatchEvent(new Event("change", { bubbles: true }));
+    try {
+      r.click();
+    } catch {
+      /* ignore */
+    }
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Fill saved Yes/No text for a group of radios sharing the same `name` (pass any member).
+ */
+export function fillRadioGroupBySavedAnswer(radios: HTMLInputElement[], answerText: string): boolean {
+  const trimmed = answerText.trim().toLowerCase();
+  if (!trimmed) return false;
+
+  const wantYes = trimmed === "yes" || trimmed.startsWith("yes ");
+  const wantNo = trimmed === "no" || trimmed.startsWith("no ");
+  if (wantYes || wantNo) {
+    return fillYesNoRadioGroup(radios, wantYes);
+  }
+
+  for (const r of radios) {
+    if ((r.value || "").trim().toLowerCase() === trimmed) {
+      r.focus();
+      r.checked = true;
+      r.dispatchEvent(new Event("input", { bubbles: true }));
+      r.dispatchEvent(new Event("change", { bubbles: true }));
+      try {
+        r.click();
+      } catch {
+        /* ignore */
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+function tryFillYesNoNearQuestionEl(
+  questionEl: Element,
+  root: Element | Document,
+  yes: boolean
+): boolean {
+  if (questionEl instanceof HTMLLabelElement && questionEl.htmlFor) {
+    const target = root.querySelector(`#${CSS.escape(questionEl.htmlFor)}`);
+    if (target instanceof HTMLSelectElement && fillYesNoSelect(target, yes)) return true;
+  }
+
+  const containers: Element[] = [];
+  if (questionEl instanceof HTMLLegendElement) {
+    const fs = questionEl.closest("fieldset");
+    if (fs) containers.push(fs);
+  }
+  const wrap = questionEl.closest(
+    ".field-wrapper, .form-group, .application-field, [class*='field'], [role='group']"
+  );
+  if (wrap) containers.push(wrap);
+  if (questionEl.parentElement) containers.push(questionEl.parentElement);
+
+  for (const container of containers) {
+    if (!container) continue;
+    const sel = container.querySelector("select:not([multiple]):not([disabled])");
+    if (sel instanceof HTMLSelectElement && fillYesNoSelect(sel, yes)) return true;
+
+    const radios = Array.from(
+      container.querySelectorAll("input[type='radio']:not([disabled])")
+    ) as HTMLInputElement[];
+    if (radios.length && fillYesNoRadioGroup(radios, yes)) return true;
+  }
+
+  let sib: Element | null = questionEl.nextElementSibling;
+  for (let i = 0; i < 5 && sib; i += 1, sib = sib.nextElementSibling) {
+    if (sib instanceof HTMLSelectElement && !sib.disabled && fillYesNoSelect(sib, yes)) return true;
+    const nested = sib.querySelector("select:not([multiple]):not([disabled])");
+    if (nested instanceof HTMLSelectElement && fillYesNoSelect(nested, yes)) return true;
+    const radios = Array.from(
+      sib.querySelectorAll("input[type='radio']:not([disabled])")
+    ) as HTMLInputElement[];
+    if (radios.length && fillYesNoRadioGroup(radios, yes)) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Fill a Yes/No <select> or radio group tied to a question label/legend.
+ */
+export function tryFillYesNoByQuestionLabel(
+  root: Element | Document,
+  labelKeywords: string[],
+  yes: boolean
+): boolean {
+  autofillLog("tryFillYesNoByQuestionLabel: start", { labelKeywords, yes });
+  const lowerTexts = labelKeywords.map((t) => t.toLowerCase());
+  const headings = Array.from(root.querySelectorAll("label, legend"));
+
+  for (const el of headings) {
+    if (!labelMatches(el, lowerTexts)) continue;
+    if (tryFillYesNoNearQuestionEl(el, root, yes)) {
+      autofillLog("tryFillYesNoByQuestionLabel: filled", { labelKeywords, yes });
+      return true;
+    }
+  }
+
+  autofillLog("tryFillYesNoByQuestionLabel: no match", { labelKeywords });
+  return false;
+}
+
 function isElementVisible(el: Element): boolean {
   if (!(el instanceof HTMLElement)) return false;
   if (el.offsetParent !== null) return true;

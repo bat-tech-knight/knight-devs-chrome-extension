@@ -6,7 +6,9 @@ import {
   fillTextInputOrReactSelect,
   tryFillByLabel,
   tryFillBySelectors,
+  tryFillReactSelectByLabel,
   tryFillSelect,
+  tryFillYesNoByQuestionLabel,
 } from "./fill-engine.js";
 
 function fieldBlob(el: Element): string {
@@ -260,6 +262,46 @@ export async function fillGeneric(candidate: AutofillCandidate): Promise<FillRep
     }
   } else {
     autofillLog("Generic: no summary/resumeText for cover", {});
+  }
+
+  if (candidate.usWorkAuthorized !== undefined) {
+    autofillLog("Generic: try US work authorization Yes/No", { usWorkAuthorized: candidate.usWorkAuthorized });
+    const yn = candidate.usWorkAuthorized ? "Yes" : "No";
+    const usOk =
+      tryFillYesNoByQuestionLabel(document, ["legally authorized", "authorized to work in the united states", "authorized to work in the us", "legally permitted to work in the us", "right to work in the united states"], candidate.usWorkAuthorized) ||
+      (await tryFillReactSelectByLabel(
+        document,
+        ["legally authorized", "authorized to work", "united states", "right to work in the us"],
+        yn,
+        yn
+      ));
+    if (usOk) {
+      filledFields += 1;
+      autofillLog("Generic: US work authorization → filled", {});
+    } else {
+      missingFields.push("us_work_authorized");
+      autofillLog("Generic: US work authorization → not filled", {});
+    }
+  }
+
+  if (candidate.requiresSponsorship !== undefined) {
+    const sponsorText = candidate.requiresSponsorship ? "Yes" : "No";
+    autofillLog("Generic: try visa sponsorship Yes/No", { requiresSponsorship: candidate.requiresSponsorship });
+    const spOk =
+      tryFillYesNoByQuestionLabel(
+        document,
+        ["visa sponsorship", "employment visa sponsorship", "require sponsorship", "require visa", "h1-b", "h1b", "o-1"],
+        candidate.requiresSponsorship
+      ) ||
+      tryFillSelect(document, ["sponsorship", "require sponsorship"], sponsorText) ||
+      (await tryFillReactSelectByLabel(document, ["sponsorship", "require sponsorship"], sponsorText, sponsorText));
+    if (spOk) {
+      filledFields += 1;
+      autofillLog("Generic: visa sponsorship → filled", {});
+    } else {
+      missingFields.push("requires_sponsorship");
+      autofillLog("Generic: visa sponsorship → not filled", {});
+    }
   }
 
   if (candidate.workAuthorization?.trim()) {

@@ -155,6 +155,20 @@
 
       <button id="fillNow" type="button">Fill now</button>
 
+      <label for="bidNotesInput">Notes for this bid (optional)</label>
+      <input
+        id="bidNotesInput"
+        type="text"
+        maxlength="500"
+        placeholder="e.g. role title or client name"
+        autocomplete="off"
+      />
+
+      <button id="recordBidBtn" type="button" class="secondary">Record bid submitted</button>
+      <p class="muted" style="margin-top: 4px; margin-bottom: 0">
+        Logs this tab’s URL and title for the selected profile. You can also use the right-click menu on the page.
+      </p>
+
       <div id="status" class="hint"></div>
     </div>
 

@@ -197,6 +197,45 @@ export async function sendTelemetry(
   }
 }
 
+export interface RecordExternalSubmissionRow {
+  id: string;
+  profile_id: string;
+  page_url: string;
+  page_title: string;
+  hostname: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+/** Persist a manual "I submitted this bid" for the current page (Option D). */
+export async function recordExternalSubmission(
+  apiBaseUrl: string,
+  accessToken: string,
+  body: {
+    profileId: string;
+    pageUrl: string;
+    pageTitle: string;
+    notes?: string;
+  }
+): Promise<RecordExternalSubmissionRow> {
+  const base = apiBaseUrl.replace(/\/$/, "");
+  const response = await fetch(`${base}/api/extension/record-submission`, {
+    method: "POST",
+    headers: authHeaders(accessToken),
+    body: JSON.stringify({
+      profileId: body.profileId,
+      pageUrl: body.pageUrl,
+      pageTitle: body.pageTitle,
+      ...(body.notes?.trim() ? { notes: body.notes.trim() } : {}),
+    }),
+  });
+  const payload = (await response.json()) as ApiEnvelope<RecordExternalSubmissionRow> & { error?: string };
+  if (!response.ok || !payload.data) {
+    throw new Error(payload.error ?? "Failed to record submission");
+  }
+  return payload.data;
+}
+
 export type SuggestFieldIntent = "open_question" | "cover_letter" | "why_role";
 
 export async function suggestFieldDraft(

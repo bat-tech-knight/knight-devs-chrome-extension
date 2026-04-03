@@ -5,6 +5,7 @@ import {
   fetchSavedAnswersList,
   lookupSavedAnswer,
   lookupSavedAnswerBuiltin,
+  recordExternalSubmission,
   sendTelemetry,
   suggestFieldDraft,
   upsertSavedAnswer,
@@ -23,6 +24,91 @@ async function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   return tabs[0];
 }
+
+function isRecordableUrl(url: string | undefined): url is string {
+  if (!url) return false;
+  return /^https?:\/\//i.test(url);
+}
+
+async function recordExternalBidForTab(
+  tab: chrome.tabs.Tab | undefined,
+  notes?: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const state = await getState();
+  const profileId = state.activeProfileId;
+  if (!profileId) {
+    return { ok: false, error: "Select an expert profile in the extension popup first." };
+  }
+  if (!tab?.id) {
+    return { ok: false, error: "No active tab." };
+  }
+  const url = tab.url;
+  if (!isRecordableUrl(url)) {
+    return { ok: false, error: "Open a normal web page (http or https) first." };
+  }
+  const accessToken = await getValidAccessToken(state.apiBaseUrl);
+  if (!accessToken) {
+    return { ok: false, error: "Sign in to Knight Devs in the extension." };
+  }
+  const pageTitle = (tab.title ?? "").trim();
+  try {
+    await recordExternalSubmission(state.apiBaseUrl, accessToken, {
+      profileId,
+      pageUrl: url,
+      pageTitle,
+      notes,
+    });
+    let hostname: string | null = null;
+    try {
+      hostname = new URL(url).hostname.toLowerCase() || null;
+    } catch {
+      hostname = null;
+    }
+    void sendTelemetry(state.apiBaseUrl, accessToken, "manual_bid_submitted", {
+      profileId,
+      pageUrl: url,
+      pageTitle,
+      hostname,
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Record failed" };
+  }
+}
+
+function registerRecordBidContextMenu(): void {
+  void chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: "knightdevs-record-bid",
+      title: "Record bid submitted (Knight Devs)",
+      contexts: ["page"],
+    });
+  });
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  registerRecordBidContextMenu();
+});
+
+registerRecordBidContextMenu();
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId !== "knightdevs-record-bid") return;
+  void recordExternalBidForTab(tab).then((res) => {
+    if (res.ok || !tab?.id || !isRecordableUrl(tab.url)) return;
+    void chrome.scripting
+      .executeScript({
+        target: { tabId: tab.id },
+        func: (message: string) => {
+          window.alert(`Knight Devs Autofill\n\n${message}`);
+        },
+        args: [res.error],
+      })
+      .catch(() => {
+        /* ignore */
+      });
+  });
+});
 
 /**
  * Send a message to the content script in a tab, injecting it first if it
@@ -69,6 +155,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           }
         }
 
+        const canRecordBid = Boolean(tab?.url && /^https?:\/\//i.test(tab.url));
+
         sendResponse({
           ok: true,
           state,
@@ -79,6 +167,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           isAuthenticated: Boolean(accessToken),
           fieldAssistEnabled: state.fieldAssistEnabled !== false,
           aiFillMissingFields: state.aiFillMissingFields === true,
+          canRecordBid,
         });
         return;
       }
@@ -230,6 +319,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           (message.data as Record<string, unknown>) ?? {}
         );
         sendResponse({ ok: true });
+        return;
+      }
+
+      if (message?.type === "RECORD_EXTERNAL_SUBMISSION") {
+        const tab = await getActiveTab();
+        const notes = typeof message.notes === "string" ? message.notes : undefined;
+        const res = await recordExternalBidForTab(tab, notes);
+        if (res.ok) {
+          sendResponse({ ok: true });
+        } else {
+          sendResponse({ ok: false, error: res.error });
+        }
         return;
       }
 

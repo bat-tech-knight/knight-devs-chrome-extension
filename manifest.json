@@ -3,7 +3,7 @@
   "name": "Knight Devs Autofill",
   "version": "0.1.0",
   "description": "Autofill job and application forms on any site using your Knight Devs expert profile (Greenhouse & Lever get tailored rules).",
-  "permissions": ["storage", "activeTab", "scripting", "tabs"],
+  "permissions": ["storage", "activeTab", "scripting", "tabs", "contextMenus"],
   "host_permissions": [
     "https://boards.greenhouse.io/*",
     "https://job-boards.greenhouse.io/*",

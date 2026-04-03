@@ -14,6 +14,7 @@ interface PopupResponse {
   isAuthenticated: boolean;
   fieldAssistEnabled: boolean;
   aiFillMissingFields: boolean;
+  canRecordBid: boolean;
 }
 
 async function message<T>(payload: unknown): Promise<T> {
@@ -62,6 +63,8 @@ function applyMainData(data: PopupResponse): void {
   const aiFillMissingFields = document.getElementById("aiFillMissingFields") as HTMLInputElement;
   const userInfo = document.getElementById("userInfo") as HTMLDivElement;
   const status = document.getElementById("status") as HTMLDivElement;
+  const recordBidBtn = document.getElementById("recordBidBtn") as HTMLButtonElement;
+  const bidNotesInput = document.getElementById("bidNotesInput") as HTMLInputElement;
 
   renderProfileOptions(profileSelect, data.profiles, data.state.activeProfileId);
   triggerMode.value = data.siteBehavior.triggerMode;
@@ -70,6 +73,13 @@ function applyMainData(data: PopupResponse): void {
   aiFillMissingFields.checked = data.aiFillMissingFields === true;
   userInfo.textContent = data.userEmail ? `Signed in as ${data.userEmail}` : "";
   status.textContent = `Site: ${data.siteKey}`;
+
+  const canRecord =
+    data.isAuthenticated &&
+    Boolean(data.state.activeProfileId) &&
+    data.canRecordBid !== false;
+  recordBidBtn.disabled = !canRecord;
+  bidNotesInput.disabled = !data.isAuthenticated || !data.state.activeProfileId;
 }
 
 async function init(): Promise<void> {
@@ -90,6 +100,8 @@ async function init(): Promise<void> {
   const fieldAssistEnabled = document.getElementById("fieldAssistEnabled") as HTMLInputElement;
   const aiFillMissingFields = document.getElementById("aiFillMissingFields") as HTMLInputElement;
   const fillNow = document.getElementById("fillNow") as HTMLButtonElement;
+  const recordBidBtn = document.getElementById("recordBidBtn") as HTMLButtonElement;
+  const bidNotesInput = document.getElementById("bidNotesInput") as HTMLInputElement;
   const status = document.getElementById("status") as HTMLDivElement;
   const logoutBtn = document.getElementById("logoutBtn") as HTMLButtonElement;
 
@@ -147,6 +159,8 @@ async function init(): Promise<void> {
 
   profileSelect.addEventListener("change", async () => {
     await message({ type: "SET_ACTIVE_PROFILE", profileId: profileSelect.value || null });
+    const data = await loadPopup();
+    applyMainData(data);
     status.textContent = "Profile updated";
   });
 
@@ -187,6 +201,25 @@ async function init(): Promise<void> {
   fillNow.addEventListener("click", async () => {
     await message({ type: "RUN_AUTOFILL_ON_ACTIVE_TAB" });
     status.textContent = "Autofill triggered";
+  });
+
+  recordBidBtn.addEventListener("click", async () => {
+    recordBidBtn.disabled = true;
+    status.textContent = "Recording…";
+    try {
+      const notes = bidNotesInput.value.trim();
+      await message({
+        type: "RECORD_EXTERNAL_SUBMISSION",
+        ...(notes ? { notes } : {}),
+      });
+      status.textContent = "Bid recorded for this tab.";
+      bidNotesInput.value = "";
+    } catch (err) {
+      status.textContent = err instanceof Error ? err.message : "Could not record bid";
+    } finally {
+      const data = await loadPopup();
+      applyMainData(data);
+    }
   });
 }
 

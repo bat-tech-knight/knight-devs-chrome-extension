@@ -34,12 +34,80 @@ export async function fillLever(candidate: AutofillCandidate): Promise<FillRepor
     autofillLog("Lever: phone → not filled", {});
   }
 
-  autofillLog("Lever: location", { hasLocation: !!candidate.location?.trim() });
-  if (await tryFillBySelectors(["input[name='location']", "input[autocomplete='address-level2']"], candidate.location)) {
-    filledFields += 1;
-    autofillLog("Lever: location → filled", {});
-  } else {
-    autofillLog("Lever: location → not filled", {});
+  autofillLog("Lever: address line 1", { has: !!candidate.addressLine1?.trim() });
+  if (candidate.addressLine1?.trim()) {
+    if (
+      await tryFillBySelectors(
+        ["input[autocomplete='street-address' i]", "input[autocomplete='address-line1' i]"],
+        candidate.addressLine1
+      )
+    ) {
+      filledFields += 1;
+      autofillLog("Lever: address line 1 → filled", {});
+    } else {
+      missingFields.push("address_line1");
+      autofillLog("Lever: address line 1 → not filled", {});
+    }
+  }
+
+  const cityForLever = candidate.addressCity?.trim() || candidate.location?.trim();
+  autofillLog("Lever: city / location", { has: !!cityForLever });
+  if (cityForLever) {
+    if (
+      await tryFillBySelectors(
+        ["input[name='location']", "input[autocomplete='address-level2' i]", "input[name='city' i]"],
+        cityForLever
+      )
+    ) {
+      filledFields += 1;
+      autofillLog("Lever: city → filled", {});
+    } else {
+      missingFields.push("city_or_location");
+      autofillLog("Lever: city → not filled", {});
+    }
+  }
+
+  autofillLog("Lever: state", { has: !!candidate.addressState?.trim() });
+  if (candidate.addressState?.trim()) {
+    if (
+      await tryFillBySelectors(
+        ["input[autocomplete='address-level1' i]", "input[name='state' i]", "input[name='province' i]"],
+        candidate.addressState
+      )
+    ) {
+      filledFields += 1;
+      autofillLog("Lever: state → filled", {});
+    } else {
+      missingFields.push("address_state");
+      autofillLog("Lever: state → not filled", {});
+    }
+  }
+
+  autofillLog("Lever: country", { has: !!candidate.addressCountry?.trim() });
+  if (candidate.addressCountry?.trim()) {
+    if (await tryFillBySelectors(["input[autocomplete='country' i]", "input[name='country' i]"], candidate.addressCountry)) {
+      filledFields += 1;
+      autofillLog("Lever: country → filled", {});
+    } else {
+      missingFields.push("address_country");
+      autofillLog("Lever: country → not filled", {});
+    }
+  }
+
+  autofillLog("Lever: postal", { has: !!candidate.addressPostalCode?.trim() });
+  if (candidate.addressPostalCode?.trim()) {
+    if (
+      await tryFillBySelectors(
+        ["input[autocomplete='postal-code' i]", "input[name='zip' i]", "input[name='postal' i]"],
+        candidate.addressPostalCode
+      )
+    ) {
+      filledFields += 1;
+      autofillLog("Lever: postal → filled", {});
+    } else {
+      missingFields.push("address_postal_code");
+      autofillLog("Lever: postal → not filled", {});
+    }
   }
 
   autofillLog("Lever: linkedin", { hasLinkedin: !!candidate.linkedin?.trim() });

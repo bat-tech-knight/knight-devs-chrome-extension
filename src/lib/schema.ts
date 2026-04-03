@@ -16,6 +16,11 @@ export interface AutofillCandidate {
   email?: string;
   phone?: string;
   location?: string;
+  addressLine1?: string;
+  addressCity?: string;
+  addressState?: string;
+  addressCountry?: string;
+  addressPostalCode?: string;
   linkedin?: string;
   github?: string;
   website?: string;
@@ -60,10 +65,26 @@ export const DEFAULT_SITE_BEHAVIOR: SiteBehavior = {
   submitMode: "fill_only",
 };
 
+/** Same segment order as `formatProfileLocation` on the platform. */
+export function formatLocationFromProfileParts(raw: Record<string, unknown>): string {
+  const segments = [
+    stringOrUndefined(raw.address_line1),
+    stringOrUndefined(raw.address_city),
+    stringOrUndefined(raw.address_state),
+    stringOrUndefined(raw.address_postal_code),
+    stringOrUndefined(raw.address_country),
+  ].filter(Boolean) as string[];
+  return segments.join(", ");
+}
+
 export function normalizeCandidate(raw: Record<string, unknown>, profileId: string): AutofillCandidate {
   const firstName = stringOrEmpty(raw.first_name);
   const lastName = stringOrEmpty(raw.last_name);
   const fullName = [firstName, lastName].filter(Boolean).join(" ").trim() || stringOrEmpty(raw.name);
+
+  const derivedLocation = formatLocationFromProfileParts(raw);
+  const locationFromRow = stringOrUndefined(raw.location);
+  const location = locationFromRow ?? stringOrUndefined(derivedLocation);
 
   return {
     profileId,
@@ -72,7 +93,12 @@ export function normalizeCandidate(raw: Record<string, unknown>, profileId: stri
     lastName: lastName || undefined,
     email: stringOrUndefined(raw.email),
     phone: stringOrUndefined(raw.phone_number),
-    location: stringOrUndefined(raw.location),
+    location,
+    addressLine1: stringOrUndefined(raw.address_line1),
+    addressCity: stringOrUndefined(raw.address_city),
+    addressState: stringOrUndefined(raw.address_state),
+    addressCountry: stringOrUndefined(raw.address_country),
+    addressPostalCode: stringOrUndefined(raw.address_postal_code),
     linkedin: stringOrUndefined(raw.linkedin_url),
     github: stringOrUndefined(raw.github_url),
     website: stringOrUndefined(raw.website_url),

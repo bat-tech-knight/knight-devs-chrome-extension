@@ -1,7 +1,13 @@
 import type { AutofillCandidate, FillReport } from "../lib/schema.js";
 import { autofillLog } from "./autofill-log.js";
 import { tryGenericCoverLetterAi } from "./cover-letter-ai-fill.js";
-import { fillTextInput, fillTextInputOrReactSelect, tryFillByLabel, tryFillSelect } from "./fill-engine.js";
+import {
+  fillTextInput,
+  fillTextInputOrReactSelect,
+  tryFillByLabel,
+  tryFillBySelectors,
+  tryFillSelect,
+} from "./fill-engine.js";
 
 function fieldBlob(el: Element): string {
   const name = (el.getAttribute("name") || "").toLowerCase();
@@ -164,9 +170,64 @@ export async function fillGeneric(candidate: AutofillCandidate): Promise<FillRep
     (await tryFillFirstMatch(textEls, used, ["phone", "tel", "mobile", "cell", "whatsapp"], candidate.phone!)) ||
     (await tryFillByLabel(document, ["phone", "phone number", "mobile"], candidate.phone!))
   );
+  await tryValue("address_line1", candidate.addressLine1, async () =>
+    (await tryFillBySelectors(
+      ["input[autocomplete='street-address' i]", "input[autocomplete='address-line1' i]"],
+      candidate.addressLine1!
+    )) ||
+    (await tryFillFirstMatch(textEls, used, ["address-line1", "street-address", "street", "address1", "addr1", "line_1"], candidate.addressLine1!)) ||
+    (await tryFillByLabel(document, ["address line 1", "street address"], candidate.addressLine1!))
+  );
+  await tryValue("address_city", candidate.addressCity, async () =>
+    (await tryFillBySelectors(
+      [
+        "input[autocomplete='address-level2' i]",
+        "input[autocomplete='locality' i]",
+        "input[name='city' i]",
+      ],
+      candidate.addressCity!
+    )) ||
+    (await tryFillFirstMatch(textEls, used, ["address-level2", "locality", "town"], candidate.addressCity!)) ||
+    (await tryFillByLabel(document, ["city", "town"], candidate.addressCity!))
+  );
+  await tryValue("address_state", candidate.addressState, async () =>
+    (await tryFillBySelectors(
+      [
+        "input[autocomplete='address-level1' i]",
+        "input[autocomplete='region' i]",
+        "input[name='state' i]",
+        "input[name='province' i]",
+      ],
+      candidate.addressState!
+    )) ||
+    (await tryFillFirstMatch(textEls, used, ["address-level1", "region", "province", "territory"], candidate.addressState!)) ||
+    (await tryFillByLabel(document, ["state", "province", "region"], candidate.addressState!))
+  );
+  await tryValue("address_country", candidate.addressCountry, async () =>
+    (await tryFillBySelectors(
+      ["input[autocomplete='country' i]", "input[autocomplete='country-name' i]"],
+      candidate.addressCountry!
+    )) ||
+    (await tryFillFirstMatch(textEls, used, ["country-name", "country"], candidate.addressCountry!)) ||
+    (await tryFillByLabel(document, ["country"], candidate.addressCountry!))
+  );
+  await tryValue("address_postal_code", candidate.addressPostalCode, async () =>
+    (await tryFillBySelectors(
+      [
+        "input[autocomplete='postal-code' i]",
+        "input[autocomplete='zip-code' i]",
+        "input[name='zip' i]",
+        "input[name='postal' i]",
+      ],
+      candidate.addressPostalCode!
+    )) ||
+    (await tryFillFirstMatch(textEls, used, ["postal-code", "zip-code", "postcode", "postal", "zip"], candidate.addressPostalCode!)) ||
+    (await tryFillByLabel(document, ["zip", "postal", "post code"], candidate.addressPostalCode!))
+  );
   await tryValue("location", candidate.location, async () =>
-    (await tryFillFirstMatch(textEls, used, ["location", "city", "address", "country", "region", "state", "zip", "postal"], candidate.location!)) ||
-    (await tryFillByLabel(document, ["location", "city", "address"], candidate.location!))
+    (await tryFillFirstMatch(textEls, used, ["currentlocation", "your_location"], candidate.location!)) ||
+    (await tryFillFirstMatch(textEls, used, ["location"], candidate.location!)) ||
+    (await tryFillByLabel(document, ["location", "where are you based", "based in"], candidate.location!))
   );
   await tryValue("linkedin", candidate.linkedin, async () =>
     (await tryFillFirstMatch(textEls, used, ["linkedin"], candidate.linkedin!)) ||
